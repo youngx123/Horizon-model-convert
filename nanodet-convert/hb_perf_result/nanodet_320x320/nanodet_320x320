@@ -1,0 +1,12 @@
+// the test
+digraph model {
+	data [label=data color=black]
+	torch_jit_subgraph_0 [label="name: torch_jit_subgraph_0
+type: BPU" color=black fillcolor=cadetblue shape=box style=filled]
+	output_HzDequantize [label="name: output_HzDequantize
+type: Dequantize" color=black fillcolor=lightgrey shape=box style=filled]
+	output [label=output color=black]
+	data -> torch_jit_subgraph_0 [label="1x3x320x320, BGR, NCHW, UINT8" color=red]
+	torch_jit_subgraph_0 -> output_HzDequantize [label="1x2125x112, INT8" color=red]
+	output_HzDequantize -> output [label="1x2125x112, FLOAT32" color=red]
+}
