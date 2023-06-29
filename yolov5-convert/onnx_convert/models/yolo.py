@@ -22,6 +22,7 @@ anchor_grid = np.asarray(A, dtype=np.float32).reshape(3, 1, -1, 1, 1, 2)
 
 
 class Detect(nn.Module):
+
     def __init__(self, nc=80, anchors=A, ch=()):  # detection layer
         super().__init__()
         self.nc = nc  # number of classes
@@ -32,11 +33,6 @@ class Detect(nn.Module):
         self.stride = torch.from_numpy(np.array([8., 16., 32.0]))
         self.m = nn.ModuleList(nn.Conv2d(x, self.no * self.na, 1) for x in ch)  # output conv
 
-    # def forward(self, x):
-    #     for i in range(self.nl):
-    #         x[i] = self.m[i](x[i])
-    #     return x
-
     def forward(self, x):
         for i in range(self.nl):
             device = x[0].device
@@ -46,6 +42,8 @@ class Detect(nn.Module):
             x[i] = x[i].reshape(bs, 3, 85, ny, nx).permute(0, 1, 3, 4, 2)
 
             grid, anchor_grid = self._make_grid(nx, ny, i, device=device)
+
+            # 转onnx时，如果有如下两行，则在cpu上进行计算
             # x[i][..., 0:2] = (x[i][..., 0:2] * 2 - 0.5 + grid) * self.stride[i]  # xy
             # x[i][..., 2:4] = (x[i][..., 2:4] * 2) ** 2 * anchor_grid  # wh
         return x
@@ -53,12 +51,12 @@ class Detect(nn.Module):
     def _make_grid(self, nx=20, ny=20, i=0, device=None):
         yv, xv = torch.meshgrid([torch.arange(ny), torch.arange(nx)])
         grid = torch.stack((xv, yv), 2).expand((1, self.na, ny, nx, 2)).float().to(device)
-        anchor_grid = self.anchor_grid[i].clone().view((1, self.na, 1, 1, 2)).expand(
-            (1, self.na, ny, nx, 2)).float().to(device)
+        anchor_grid = self.anchor_grid[i].clone().view((1, self.na, 1, 1, 2)).expand((1, self.na, ny, nx, 2)).float().to(device)
         return grid, anchor_grid
 
 
 class Model(nn.Module):
+
     def __init__(self, yaml=None):
         super(Model, self).__init__()
         assert yaml is not None, "input yolov5 framework config file !!!"
@@ -81,20 +79,16 @@ class Model(nn.Module):
         self.b9 = SPPF(backhead[8][-1], backhead[9][-1], 5)
 
         self.head10 = Conv(backhead[9][-1], backhead[10][-1], 1, 1)
-        self.head13 = C3(backhead[10][-1] + backhead[6][-1], backhead[13][-1],
-                         max(round(backhead[13][1] * depth_multiple), 1), False)
+        self.head13 = C3(backhead[10][-1] + backhead[6][-1], backhead[13][-1], max(round(backhead[13][1] * depth_multiple), 1), False)
 
         self.head14 = Conv(backhead[13][-1], backhead[14][-1], 1, 1)
-        self.head17 = C3(backhead[14][-1] + backhead[4][-1], backhead[17][-1],
-                         max(round(backhead[17][1] * depth_multiple), 1), False)  # p3
+        self.head17 = C3(backhead[14][-1] + backhead[4][-1], backhead[17][-1], max(round(backhead[17][1] * depth_multiple), 1), False)  # p3
 
         self.head18 = Conv(backhead[17][-1], backhead[18][-1], 3, 2)
-        self.head20 = C3(backhead[18][-1] + backhead[14][-1], backhead[20][-1],
-                         max(round(backhead[20][1] * depth_multiple), 1), False)  # p4
+        self.head20 = C3(backhead[18][-1] + backhead[14][-1], backhead[20][-1], max(round(backhead[20][1] * depth_multiple), 1), False)  # p4
 
         self.head21 = Conv(backhead[20][-1], backhead[21][-1], 3, 2)
-        self.head23 = C3(backhead[21][-1] + backhead[10][-1], backhead[23][-1],
-                         max(round(backhead[23][1] * depth_multiple), 1), False)  # p5
+        self.head23 = C3(backhead[21][-1] + backhead[10][-1], backhead[23][-1], max(round(backhead[23][1] * depth_multiple), 1), False)  # p5
 
         self.detect_layer = Detect(ch=(backhead[17][-1], backhead[20][-1], backhead[23][-1]))
 
@@ -225,9 +219,7 @@ if __name__ == '__main__':
     del pretrained_state_dict['model.24.anchors']
     del pretrained_state_dict['model.24.anchor_grid']
 
-    for id, (a, b, namea, nameb) in enumerate(
-            zip(pretrained_state_dict.values(), model_static.values(), pretrained_state_dict.keys(),
-                model_static.keys())):
+    for id, (a, b, namea, nameb) in enumerate(zip(pretrained_state_dict.values(), model_static.values(), pretrained_state_dict.keys(), model_static.keys())):
         if namea.find('anchor') > -1:
             continue
         if not operator.eq(a.shape, b.shape):

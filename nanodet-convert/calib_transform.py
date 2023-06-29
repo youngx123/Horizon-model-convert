@@ -9,18 +9,17 @@ from nanodet.data.transform import Pipeline
 import os
 import numpy as np
 from tqdm import tqdm
+import torch
 
-
-# pipline = {"normalize": [[103.53, 116.28, 123.675], [57.375, 57.12, 58.395]]}
-pipline = {"normalize": [[0, 0, 0], [1,1, 1]]}
+pipline = {"normalize": [[103.53, 116.28, 123.675], [57.375, 57.12, 58.395]]}
+pipline = {"normalize": [[0, 0, 0], [1, 1, 1]]}
 keep_ratio = False
-
 
 transform = Pipeline(pipline, keep_ratio)
 
 if __name__ == '__main__':
     src_dir = r"E:\Share_Files\hb_mapper infer\nanodet-convert\src_data"
-    save_dir = r"E:\Share_Files\hb_mapper infer\nanodet-convert\calibration-data"
+    save_dir = r"E:\Share_Files\hb_mapper infer\nanodet-convert\calibration_data"
     file_names = os.listdir(src_dir)
 
     meta = dict()
@@ -31,6 +30,12 @@ if __name__ == '__main__':
         image = cv2.imread(file)
         meta["img"] = image
 
-        meta = transform(None,meta, (320, 320))
+        # srcimg = cv2.resize(image, (640, 640)) / 255.0
+        # srcimg = srcimg[np.newaxis, ...]
+        # srcimg = srcimg.transpose(0, 3, 1, 2)
+        # srcimg = torch.from_numpy(srcimg).float()
+        # srcimg.transpose(2, 1, 0).astype(np.float32).tofile(save_name)
 
-        meta["img"].transpose(2,1,0).astype(np.float32).tofile(save_name)
+        meta = transform(None, meta, (320, 320))
+
+        meta["img"].transpose(2, 1, 0).astype(np.float32).tofile(save_name)
